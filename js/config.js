@@ -16,7 +16,7 @@ window.CONFIG = {
   // screen creates the spreadsheet on first run and shows the ID. Paste
   // it here (GitHub pencil icon) so BOTH phones use the same sheet, or
   // paste it into Settings on the second phone.
-  spreadsheetId: "",
+  spreadsheetId: "1jsTSmC2Eo34ESo0KxS6-1B-a-IznMz80d900JhpFT00",
 
   spreadsheetName: "Receipt Tracker",
 
