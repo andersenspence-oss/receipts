@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a7a4a">
+  <title>Receipt Tracker</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header>
+    <h1>🧾 Receipt Tracker</h1>
+    <div id="syncStatus" class="sync-status"></div>
+  </header>
+
+  <main>
+    <!-- ============ CAPTURE ============ -->
+    <section id="view-capture" class="view">
+      <label class="field">
+        <span>Business</span>
+        <select id="capBusiness"></select>
+      </label>
+
+      <div class="capture-buttons">
+        <button id="btnSnap" class="big-btn">📷 Snap receipt</button>
+        <button id="btnUpload" class="big-btn secondary">⬆️ Upload image / PDF</button>
+      </div>
+      <input type="file" id="fileSnap" accept="image/*" capture="environment" hidden>
+      <input type="file" id="fileUpload" accept="image/*,application/pdf" hidden>
+
+      <div id="capPreview" class="preview hidden"></div>
+      <div id="aiStatus" class="ai-status hidden"></div>
+
+      <form id="capForm" class="hidden">
+        <div class="row">
+          <label class="field"><span>Date</span><input type="date" id="fDate" required></label>
+          <label class="field"><span>Amount $</span><input type="number" id="fAmount" step="0.01" inputmode="decimal" required></label>
+        </div>
+        <label class="field"><span>Vendor</span><input type="text" id="fVendor" required></label>
+        <div class="row">
+          <label class="field"><span>Sales tax $</span><input type="number" id="fTax" step="0.01" inputmode="decimal"></label>
+          <label class="field"><span>Payment method</span><input type="text" id="fPayment" placeholder="Visa ...1234"></label>
+        </div>
+        <label class="field"><span>Category</span><select id="fCategory"></select></label>
+        <label class="field"><span>What was it for?</span><input type="text" id="fDescription"></label>
+        <label class="field"><span>Notes (optional)</span><input type="text" id="fNotes"></label>
+        <button type="submit" class="big-btn">💾 Save receipt</button>
+        <button type="button" id="btnCancelCap" class="link-btn">Cancel</button>
+      </form>
+    </section>
+
+    <!-- ============ RECEIPTS ============ -->
+    <section id="view-receipts" class="view hidden">
+      <div class="list-header">
+        <h2>Recent receipts</h2>
+        <button id="btnSyncNow" class="small-btn">Sync now</button>
+      </div>
+      <div id="receiptList"></div>
+    </section>
+
+    <!-- ============ EXPORT ============ -->
+    <section id="view-export" class="view hidden">
+      <h2>Export</h2>
+      <label class="field"><span>Business</span><select id="expBusiness"></select></label>
+      <div class="row">
+        <label class="field"><span>From</span><input type="date" id="expFrom"></label>
+        <label class="field"><span>To</span><input type="date" id="expTo"></label>
+      </div>
+      <button id="btnExpQB" class="big-btn">⬇️ QuickBooks CSV</button>
+      <p class="hint">3-column format (Date, Description, Amount) ready for QuickBooks bank/expense import. Amounts are negative = money out.</p>
+      <button id="btnExpFull" class="big-btn secondary">⬇️ Full detail CSV</button>
+      <p class="hint">Every column, for your accountant or backups.</p>
+      <div id="expStatus" class="status-line"></div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="view-settings" class="view hidden">
+      <h2>Settings</h2>
+
+      <div class="card">
+        <h3>Who's using this phone</h3>
+        <select id="setProfile"></select>
+      </div>
+
+      <div class="card">
+        <h3>Google account</h3>
+        <div id="googleStatus" class="status-line"></div>
+        <button id="btnGoogleConnect" class="small-btn">Connect Google account</button>
+        <button id="btnGoogleDisconnect" class="small-btn secondary">Disconnect</button>
+      </div>
+
+      <div class="card">
+        <h3>Spreadsheet</h3>
+        <div id="sheetStatus" class="status-line"></div>
+        <button id="btnCreateSheet" class="small-btn">Create my Receipt Tracker spreadsheet</button>
+        <label class="field"><span>…or paste an existing spreadsheet ID</span>
+          <input type="text" id="setSheetId" placeholder="the long ID from the sheet URL">
+        </label>
+        <button id="btnLinkSheet" class="small-btn secondary">Link spreadsheet</button>
+        <a id="lnkOpenSheet" class="link-btn hidden" target="_blank" rel="noopener">Open the spreadsheet ↗</a>
+        <button id="btnTestSheet" class="small-btn">Test connection</button>
+      </div>
+
+      <div class="card">
+        <h3>Claude receipt reading</h3>
+        <p class="hint">Paste an Anthropic API key so photos are read automatically (vendor, date, total, category). The key stays on this phone only.</p>
+        <label class="field"><span>API key</span>
+          <input type="password" id="setApiKey" placeholder="sk-ant-...">
+        </label>
+        <button id="btnSaveKey" class="small-btn">Save key</button>
+        <div id="keyStatus" class="status-line"></div>
+      </div>
+
+      <div class="card">
+        <h3>Businesses</h3>
+        <div id="bizList"></div>
+        <div class="row">
+          <label class="field"><span>New business</span><input type="text" id="newBizName"></label>
+          <label class="field"><span>Type</span>
+            <select id="newBizType">
+              <option value="business">Business (Schedule C)</option>
+              <option value="rental">Rental (Schedule E)</option>
+              <option value="personal">Personal</option>
+            </select>
+          </label>
+        </div>
+        <button id="btnAddBiz" class="small-btn">Add business</button>
+        <div id="bizStatus" class="status-line"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button data-view="capture" class="nav-btn active">📷<span>Capture</span></button>
+    <button data-view="receipts" class="nav-btn">🧾<span>Receipts</span></button>
+    <button data-view="export" class="nav-btn">⬇️<span>Export</span></button>
+    <button data-view="settings" class="nav-btn">⚙️<span>Settings</span></button>
+  </nav>
+
+  <div id="profileModal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Who's phone is this?</h2>
+      <div id="profileChoices"></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/google.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
