@@ -82,29 +82,35 @@ window.Sync = (() => {
     }
   }
 
+  // Labels each stage so a failure says exactly where it happened.
+  async function step(label, fn) {
+    try { return await fn(); }
+    catch (e) { throw new Error(label + " — " + (e.message || e)); }
+  }
+
   async function syncEntry(entry, map) {
     if (!entry.driveId) {
       const photo = await DB.get("photos", entry.entryID);
       if (photo) {
         const year = (entry.date || entry.createdAt || "").slice(0, 4) || String(new Date().getFullYear());
-        const folderId = await Sheets.ensureFolder(entry.business, year);
+        const folderId = await step("Drive folder lookup", () => Sheets.ensureFolder(entry.business, year));
         const ext = entry.isPdf ? ".pdf" : ".jpg";
         const mime = entry.isPdf ? "application/pdf" : "image/jpeg";
         const vendorSlug = (entry.vendor || "receipt").replace(/[^A-Za-z0-9]+/g, "-").slice(0, 30);
         const filename = (entry.date || "undated") + "_" + vendorSlug + "_" + entry.entryID.slice(0, 8) + ext;
         let blob = photo.blob;
-        if (!entry.isPdf) blob = await AI.compressImage(photo.blob, 2000, 0.75);
-        entry.driveId = await Sheets.uploadReceipt(blob, filename, folderId, mime);
+        if (!entry.isPdf) blob = await step("Photo compression", () => AI.compressImage(photo.blob, 2000, 0.75));
+        entry.driveId = await step("Photo upload to Drive", () => Sheets.uploadReceipt(blob, filename, folderId, mime));
         await DB.put("entries", entry);
       }
     }
 
     const row = buildRow(entry, map);
-    const existing = await Sheets.findRow(entry.entryID, map, entry.business);
+    const existing = await step("Duplicate check", () => Sheets.findRow(entry.entryID, map, entry.business));
     if (existing) {
-      await Sheets.updateRow(row, existing, entry.business);
+      await step("Sheet row update", () => Sheets.updateRow(row, existing, entry.business));
     } else {
-      await Sheets.appendRow(row, entry.business);
+      await step("Sheet row write", () => Sheets.appendRow(row, entry.business));
     }
     entry.updatedAt = new Date().toISOString();
   }
