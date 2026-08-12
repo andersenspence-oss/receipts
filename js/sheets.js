@@ -112,10 +112,9 @@ window.Sheets = (() => {
         json: { values: [EXPECTED_HEADERS] },
       });
     }
-    await call(valuesURL(quote(BIZ_TAB) + "!A1:append", {
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-    }), { method: "POST", json: { values: [[name, type, "active"]] } });
+    await call(appendURL(BIZ_TAB, "RAW"), {
+      method: "POST", json: { values: [[name, type, "active"]] },
+    });
   }
 
   // Archiving keeps the tab and every logged receipt; the business just
@@ -164,11 +163,15 @@ window.Sheets = (() => {
     return null;
   }
 
+  // The ":append" verb must stay OUTSIDE the URL-encoded range — encoding
+  // the colon makes Google return 404.
+  function appendURL(title, valueInputOption) {
+    const p = new URLSearchParams({ valueInputOption, insertDataOption: "INSERT_ROWS" });
+    return base() + "/values/" + encodeURIComponent(quote(title) + "!A1") + ":append?" + p;
+  }
+
   async function appendRow(row, title) {
-    await call(valuesURL(quote(title) + "!A1:append", {
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-    }), { method: "POST", json: { values: [row] } });
+    await call(appendURL(title, "USER_ENTERED"), { method: "POST", json: { values: [row] } });
   }
 
   async function updateRow(row, rowNumber, title) {
